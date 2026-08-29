@@ -5,5 +5,7 @@
 	<!-- Allow 120 Hz rendering on ProMotion devices -->
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Cosmic Dust saves the nebula to your photos as a Live Photo you can use as an animated wallpaper.</string>
 </dict>
 </plist>

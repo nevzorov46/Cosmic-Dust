@@ -42,6 +42,7 @@ Open `CosmicDust.xcodeproj`, run on a device (simulator works but its performanc
 - **Toggles**: Simulation CPU/GPU and Submission Naive/Instanced, live, with a particle-count slider (1k–1M).
 - **▶ Demo tour**: a scripted 21-second pass through every mode — made for hands-free screen recordings.
 - Touch and drag: gravity well.
+- **✦ Live wallpaper**: records three seconds and saves it to Photos as a Live Photo — iOS takes that as an animated Lock Screen wallpaper.
 
 ## What the numbers already say comes next
 

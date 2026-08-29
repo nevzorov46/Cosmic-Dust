@@ -4,6 +4,7 @@ import SwiftUI
 struct StatsHUD: View {
     @ObservedObject var renderer: Renderer
     @ObservedObject var demo: DemoDirector
+    @ObservedObject var exporter: WallpaperExporter
     @State private var countExponent: Double = log10(200_000)
 
     var body: some View {
@@ -56,8 +57,13 @@ struct StatsHUD: View {
 
     private var controls: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack {
+            HStack(spacing: 18) {
                 Spacer()
+                Button("✦ Live wallpaper") {
+                    exporter.start()
+                }
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.white.opacity(0.7))
                 Button(demo.isRunning ? "Demo tour running…" : "▶ Demo tour") {
                     demo.start(renderer)
                 }

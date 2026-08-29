@@ -77,6 +77,10 @@ final class Renderer: NSObject, MTKViewDelegate, ObservableObject {
     private var fpsAverage: Double = 0
     private var lastStatsPublish: CFTimeInterval = 0
 
+    /// Set while a live-wallpaper capture is running; frames are drawn into its
+    /// textures and mirrored to the screen.
+    weak var exporter: WallpaperExporter?
+
     // Written by the UI/touch on the main thread, read in draw()
     private var well: SIMD2<Float>?
 
@@ -171,11 +175,20 @@ final class Renderer: NSObject, MTKViewDelegate, ObservableObject {
     }
 
     func draw(in view: MTKView) {
+        // A drawable can only be blitted into when it is not framebuffer-only,
+        // and the flag has to be set before the drawable is created
+        let isExporting = exporter?.isActive ?? false
+        view.framebufferOnly = !isExporting
+
         guard isSeeded,
               let descriptor = view.currentRenderPassDescriptor,
               let drawable = view.currentDrawable,
               let commandBuffer = commandQueue.makeCommandBuffer()
         else { return }
+
+        let captureFrame = isExporting
+            ? exporter?.dequeueFrame(device: device, size: view.drawableSize)
+            : nil
 
         let now = CACurrentMediaTime()
         // rawDelta is the true frame time (feeds the FPS counter); deltaTime is
@@ -234,7 +247,19 @@ final class Renderer: NSObject, MTKViewDelegate, ObservableObject {
         }
 
         var drawCalls = 0
-        if let render = commandBuffer.makeRenderCommandEncoder(descriptor: descriptor) {
+        let renderDescriptor: MTLRenderPassDescriptor
+        if let captureFrame {
+            let capture = MTLRenderPassDescriptor()
+            capture.colorAttachments[0].texture = captureFrame.texture
+            capture.colorAttachments[0].loadAction = .clear
+            capture.colorAttachments[0].clearColor = view.clearColor
+            capture.colorAttachments[0].storeAction = .store
+            renderDescriptor = capture
+        } else {
+            renderDescriptor = descriptor
+        }
+
+        if let render = commandBuffer.makeRenderCommandEncoder(descriptor: renderDescriptor) {
             render.setVertexBuffer(particleBuffer, offset: 0, index: Int(BufferIndexParticles.rawValue))
             render.setVertexBytes(&uniforms, length: MemoryLayout<Uniforms>.stride, index: Int(BufferIndexUniforms.rawValue))
 
@@ -255,6 +280,20 @@ final class Renderer: NSObject, MTKViewDelegate, ObservableObject {
             render.endEncoding()
         }
 
+        // While capturing, the frame lives in the exporter's texture — copy it
+        // to the screen so the app still looks live
+        if let captureFrame, let blit = commandBuffer.makeBlitCommandEncoder() {
+            blit.copy(
+                from: captureFrame.texture, sourceSlice: 0, sourceLevel: 0,
+                sourceOrigin: MTLOrigin(x: 0, y: 0, z: 0),
+                sourceSize: MTLSize(width: captureFrame.texture.width,
+                                    height: captureFrame.texture.height, depth: 1),
+                to: drawable.texture, destinationSlice: 0, destinationLevel: 0,
+                destinationOrigin: MTLOrigin(x: 0, y: 0, z: 0)
+            )
+            blit.endEncoding()
+        }
+
         commandBuffer.present(drawable)
 
         let cpuEncodeMs = (CACurrentMediaTime() - encodeStart) * 1000
@@ -268,6 +307,7 @@ final class Renderer: NSObject, MTKViewDelegate, ObservableObject {
 
         commandBuffer.addCompletedHandler { [weak self] buffer in
             guard let self else { return }
+            if let captureFrame { self.exporter?.submit(captureFrame) }
             let gpuMs = max(0, buffer.gpuEndTime - buffer.gpuStartTime) * 1000
             self.publishStats(gpuMs: gpuMs, cpuSimMs: cpuSimMs, cpuEncodeMs: cpuEncodeMs, drawCalls: drawCalls, count: count)
         }
