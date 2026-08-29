@@ -4,6 +4,8 @@ An interactive nebula of up to a million GPU particles for iPhone — and a set 
 
 The twist: every naive implementation **ships inside the app** behind a live toggle. Flip a switch, watch the frame time change on the built-in HUD, and reproduce every number below on your own phone. The case studies are the product; the app is the evidence.
 
+![Curl-noise filaments in half a million particles](media/hero.png)
+
 <p align="center">
   <img src="media/gravity-well.png" width="320" alt="Gravity well pulling half a million particles into a blazing core">
   &nbsp;&nbsp;

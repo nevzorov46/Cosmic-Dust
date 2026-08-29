@@ -2,6 +2,9 @@ import MetalKit
 import SwiftUI
 
 struct ContentView: View {
+    /// "-clean" hides every overlay for capturing promo stills and video.
+    private static let isClean = ProcessInfo.processInfo.arguments.contains("-clean")
+
     @StateObject private var model = RendererModel()
     @StateObject private var demo = DemoDirector()
 
@@ -10,14 +13,18 @@ struct ContentView: View {
             Color.black.ignoresSafeArea()
             if let renderer = model.renderer {
                 MetalView(renderer: renderer).ignoresSafeArea()
-                StatsHUD(renderer: renderer, demo: demo)
+                if !Self.isClean {
+                    StatsHUD(renderer: renderer, demo: demo)
+                }
                 #if targetEnvironment(simulator)
-                VStack {
-                    Text("SIMULATOR PREVIEW — NOT A BENCHMARK")
-                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(.orange.opacity(0.8))
-                        .padding(.top, 2)
-                    Spacer()
+                if !Self.isClean {
+                    VStack {
+                        Text("SIMULATOR PREVIEW — NOT A BENCHMARK")
+                            .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(.orange.opacity(0.8))
+                            .padding(.top, 2)
+                        Spacer()
+                    }
                 }
                 #endif
             } else {
